@@ -13,17 +13,15 @@ export default function UserList() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 1. Fetch the full list of users
+  // 1. Fetch data from Convex
   const users = useQuery(api.users.getUsers);
-
-  // 2. Get your own record from Convex
   const me = useQuery(api.users.getMe, {
     clerkId: clerkUser?.id ?? "",
   });
 
   const createConversation = useMutation(api.conversations.getOrCreateConversation);
 
-  // Handle loading state
+  // Loading Skeleton
   if (users === undefined || me === undefined) {
     return (
       <div className="p-4 space-y-4 animate-pulse">
@@ -40,25 +38,16 @@ export default function UserList() {
     );
   }
 
-  // Handle "Not Found" state (me is null)
-  if (!me) {
-    return (
-      <div className="p-4 text-center text-sm text-zinc-500">
-        User profile not found. Please try logging in again.
-      </div>
-    );
-  }
+  if (!me) return <div className="p-4 text-center text-xs text-zinc-500">Profile not found.</div>;
 
-  // Filter users based on search term and exclude yourself
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      user.clerkId !== me?.clerkId
+  // 2. Filter logic: Exclude 'Me' and apply search filter
+  const otherUsers = users?.filter(
+    (u) => 
+      u._id !== me._id && 
+      u.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleUserClick = async (otherUserId: any) => {
-    if (!me) return;
-
     try {
       const conversationId = await createConversation({
         userA: me._id,
@@ -72,41 +61,35 @@ export default function UserList() {
 
   return (
     <div className="flex flex-col h-full bg-inherit">
-      {/* 1. Active Chat List Section */}
-      <div className="flex-none max-h-[40%] overflow-y-auto border-b border-zinc-100 dark:border-zinc-800">
+      {/* SECTION 1: ACTIVE CHATS (Top) */}
+      <div className="flex-none max-h-[45%] overflow-y-auto border-b border-zinc-200 dark:border-zinc-800">
+        <h2 className="p-4 pb-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+          Active Chats
+        </h2>
         <ChatList meId={me._id} />
       </div>
 
-      {/* 2. Search Section */}
+      {/* SECTION 2: SEARCH & DIRECTORY (Bottom) */}
       <div className="p-4 flex-none">
-        <h2 className="pb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        <h2 className="pb-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
           Find People
         </h2>
         <input
           type="text"
           placeholder="Search people..."
-          className="w-full p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 transition-all"
+          className="w-full p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500/20 transition-all"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* 3. User Search Results */}
       <div className="flex-1 overflow-y-auto">
-        {filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-3">
-              <span className="text-xl">🔍</span>
-            </div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {searchTerm ? "No users found" : "No one else is here yet"}
-            </p>
-            <p className="text-xs text-zinc-500 mt-1">
-              {searchTerm ? "Try a different name" : "Invite some friends to join Mesme!"}
-            </p>
+        {!otherUsers || otherUsers.length === 0 ? (
+          <div className="p-8 text-center text-zinc-500 text-xs italic">
+            {searchTerm ? "No users found" : "No other users joined yet"}
           </div>
         ) : (
-          filteredUsers.map((user) => (
+          otherUsers.map((user) => (
             <div
               key={user._id}
               onClick={() => handleUserClick(user._id)}
@@ -124,10 +107,10 @@ export default function UserList() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                   {user.name}
                 </p>
-                <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
               </div>
             </div>
           ))

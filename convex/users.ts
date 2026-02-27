@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 
 /**
  * Syncs Clerk user data with the Convex database.
- * Called on initial login to ensure a local record exists.
+ * Uses the 'by_clerkId' index to ensure idempotency.
  */
 export const storeUser = mutation({
   args: {
@@ -13,15 +13,18 @@ export const storeUser = mutation({
     imageUrl: v.string(),
   },
   handler: async (ctx, args) => {
-    // Check if user already exists
-    const user = await ctx.db
+    // 1. Check if this Clerk user already exists in our DB
+    const existingUser = await ctx.db
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .unique();
 
-    if (user !== null) return user._id;
+    // 2. If they exist, just return their ID and STOP
+    if (existingUser !== null) {
+      return existingUser._id;
+    }
 
-    // Create new user record
+    // 3. Only if they don't exist, create a new record
     return await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
@@ -34,7 +37,7 @@ export const storeUser = mutation({
 });
 
 /**
- * Updates presence status when the user closes the tab or switches visibility.
+ * Updates presence status and refreshes the lastSeen timestamp.
  */
 export const updatePresence = mutation({
   args: { userId: v.id("users"), isOnline: v.boolean() },
@@ -47,7 +50,7 @@ export const updatePresence = mutation({
 });
 
 /**
- * Standard query to fetch the current user record.
+ * Standard query to fetch the current user record by Clerk ID.
  */
 export const getMe = query({
   args: { clerkId: v.string() },
@@ -60,8 +63,7 @@ export const getMe = query({
 });
 
 /**
- * Fetches all users from the database.
- * Useful for building a user directory or search functionality.
+ * Fetches all users from the database for the user directory.
  */
 export const getUsers = query({
   args: {},
