@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Muted Stone / Linen */
+  --background: #F4F1EA; 
+  /* Dark Roasted Coffee Bean */
+  --foreground: #3E322E; 
 }
 
 @theme inline {
@@ -12,15 +14,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Note: Dark mode media query removed to preserve the 
+   Coffee & Beige aesthetic regardless of system settings. 
+*/
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Using your Geist font variables instead of Arial for a cleaner look */
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  transition: background-color 0.3s ease;
 }
